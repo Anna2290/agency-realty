@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+ENV/
+
+# База данных
+*.db
+*.sqlite3
+
+# Кэши
+.pytest_cache/
+.mypy_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# PDF-экспорт
+exports/
+*.pdf
+
+# macOS
+.DS_Store
