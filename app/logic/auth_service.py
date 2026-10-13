@@ -1,10 +1,4 @@
-"""Бизнес-логика аутентификации и разграничения прав доступа.
-
-Реализует требования п.4.1.5 и п.4.1.9 ТЗ:
-- парольная аутентификация;
-- роли: администратор / агент;
-- защита персональных данных клиентов.
-"""
+"""Бизнес-логика аутентификации и разграничения прав доступа."""
 
 import hashlib
 import hmac
@@ -16,37 +10,22 @@ from sqlalchemy.orm import Session
 from app.database.connection import get_session
 from app.database.models import User
 
-# Количество итераций для PBKDF2
 _ITERATIONS = 100_000
 _SALT_SIZE = 16
 
 
 def _hash_password(password: str, salt: Optional[bytes] = None) -> str:
-    """Хэширует пароль через PBKDF2-HMAC-SHA256.
-
-    Args:
-        password: пароль в открытом виде.
-        salt: соль (если None — генерируется случайно).
-
-    Returns:
-        Строка формата 'salt_hex$hash_hex'.
-    """
+    """Хэширует пароль через PBKDF2-HMAC-SHA256."""
     if salt is None:
         salt = os.urandom(_SALT_SIZE)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _ITERATIONS)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, _ITERATIONS
+    )
     return f"{salt.hex()}${digest.hex()}"
 
 
 def _verify_password(password: str, stored: str) -> bool:
-    """Проверяет пароль против сохранённого хэша.
-
-    Args:
-        password: введённый пароль.
-        stored: строка 'salt_hex$hash_hex' из БД.
-
-    Returns:
-        True, если пароль верный.
-    """
+    """Проверяет пароль против сохранённого хэша."""
     try:
         salt_hex, hash_hex = stored.split("$")
         salt = bytes.fromhex(salt_hex)
@@ -73,16 +52,7 @@ class AuthService:
         password: str,
         role: str = "agent",
     ) -> Optional[User]:
-        """Регистрирует нового пользователя.
-
-        Args:
-            username: логин.
-            password: пароль в открытом виде.
-            role: 'admin' или 'agent'.
-
-        Returns:
-            Созданный User или None, если логин занят.
-        """
+        """Регистрирует нового пользователя."""
         if self.session.query(User).filter_by(username=username).first():
             return None
         user = User(
@@ -96,15 +66,7 @@ class AuthService:
         return user
 
     def login(self, username: str, password: str) -> bool:
-        """Выполняет вход пользователя.
-
-        Args:
-            username: логин.
-            password: пароль.
-
-        Returns:
-            True при успешном входе.
-        """
+        """Выполняет вход пользователя."""
         user = self.session.query(User).filter_by(username=username).first()
         if not user:
             return False
@@ -126,6 +88,7 @@ class AuthService:
         return bool(self.current_user and self.current_user.role == "admin")
 
     def ensure_default_admin(self) -> None:
-        """Создаёт администратора по умолчанию (admin/admin), если БД пуста."""
-        if self.session.query(User).count() == 0:
+        """Создаёт администратора по умолчанию (admin/admin), если его нет."""
+        existing = self.session.query(User).filter_by(username="admin").first()
+        if existing is None:
             self.register("admin", "admin", role="admin")
